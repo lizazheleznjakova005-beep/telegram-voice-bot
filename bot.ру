@@ -6,23 +6,26 @@ from aiogram.types import Message
 
 TOKEN = os.getenv("BOT_TOKEN")
 
+if not TOKEN:
+    raise RuntimeError("BOT_TOKEN is not set")
+
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 
 @dp.message()
-async def get_file_id(message: Message):
+async def message_handler(message: Message):
+    print("Получено сообщение")
+
     if message.voice:
-        print("VOICE FILE_ID:")
+        print("VOICE FILE ID:")
         print(message.voice.file_id)
 
-        await message.answer(
-            "Получила голосовое. File ID отправлен в логи."
-        )
+        await message.answer("Голосовое получено!")
 
 
 async def main():
-    print("Бот запущен")
+    print("БОТ ЗАПУЩЕН")
     await dp.start_polling(bot)
 
 
