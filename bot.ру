@@ -1,37 +1,86 @@
 import asyncio
 import logging
 import os
-import sys
 
-from aiogram import Bot, Dispatcher
-from aiogram.types import Message
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import ChatJoinRequest, ChatMemberUpdated
 
 TOKEN = os.getenv("BOT_TOKEN")
 
 if not TOKEN:
     raise RuntimeError("BOT_TOKEN is not set")
 
+VOICE_FILE_ID = "AwACAgIAAxkBAAMDan4PpwOhtrDyCSJSA7b2mamFrm4AAkqkAAJ1BvFL12r5ZScIDpQ9BA"
+
 dp = Dispatcher()
 
+# Заявки, которые пользователь отправил на вступление.
+# key = (chat_id, user_id)
+pending_requests = set()
 
-@dp.message()
-async def message_handler(message: Message):
-    print(f"Получено сообщение: {message.content_type}")
 
-    if message.voice:
-        print(f"VOICE FILE ID: {message.voice.file_id}")
-        await message.answer("Голосовое получено!")
+@dp.chat_join_request()
+async def join_request_handler(request: ChatJoinRequest):
+    chat_id = request.chat.id
+    user_id = request.from_user.id
+
+    pending_requests.add((chat_id, user_id))
+
+    print(
+        f"Новая заявка: "
+        f"user_id={user_id}, "
+        f"chat_id={chat_id}"
+    )
+
+
+@dp.chat_member()
+async def member_update_handler(update: ChatMemberUpdated, bot: Bot):
+    old_status = update.old_chat_member.status
+    new_status = update.new_chat_member.status
+
+    # Пользователь действительно стал участником группы
+    if new_status in ("member", "restricted") and old_status in (
+        "left",
+        "kicked",
+    ):
+        chat_id = update.chat.id
+        user_id = update.new_chat_member.user.id
+
+        key = (chat_id, user_id)
+
+        if key in pending_requests:
+            pending_requests.discard(key)
+
+            print(
+                f"Заявка принята вручную: "
+                f"user_id={user_id}"
+            )
+
+            try:
+                await bot.send_voice(
+                    chat_id=user_id,
+                    voice=VOICE_FILE_ID,
+                )
+
+                print(
+                    f"Голосовое отправлено пользователю "
+                    f"{user_id}"
+                )
+
+            except Exception as e:
+                print(
+                    f"Не удалось отправить голосовое "
+                    f"user_id={user_id}: {e}"
+                )
 
 
 async def main():
-    logging.basicConfig(
-        level=logging.INFO,
-        stream=sys.stdout,
-    )
-
-    print("БОТ ЗАПУЩЕН")
+    logging.basicConfig(level=logging.INFO)
 
     bot = Bot(token=TOKEN)
+
+    print("БОТ ЗАПУЩЕН")
+    print("Ожидаю заявки на вступление...")
 
     try:
         await dp.start_polling(bot)
