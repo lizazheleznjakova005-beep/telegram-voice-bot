@@ -1,5 +1,7 @@
-import os
 import asyncio
+import logging
+import os
+import sys
 
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message
@@ -9,24 +11,32 @@ TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
     raise RuntimeError("BOT_TOKEN is not set")
 
-bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 
 @dp.message()
 async def message_handler(message: Message):
-    print("Получено сообщение")
+    print(f"Получено сообщение: {message.content_type}")
 
     if message.voice:
-        print("VOICE FILE ID:")
-        print(message.voice.file_id)
-
+        print(f"VOICE FILE ID: {message.voice.file_id}")
         await message.answer("Голосовое получено!")
 
 
 async def main():
+    logging.basicConfig(
+        level=logging.INFO,
+        stream=sys.stdout,
+    )
+
     print("БОТ ЗАПУЩЕН")
-    await dp.start_polling(bot)
+
+    bot = Bot(token=TOKEN)
+
+    try:
+        await dp.start_polling(bot)
+    finally:
+        await bot.session.close()
 
 
 if __name__ == "__main__":
