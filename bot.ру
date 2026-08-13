@@ -2,20 +2,40 @@ import asyncio
 import logging
 import os
 
-from aiogram import Bot, Dispatcher
-from aiogram.types import ChatJoinRequest, ChatMemberUpdated
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import ChatJoinRequest, ChatMemberUpdated, Message
 
 TOKEN = os.getenv("BOT_TOKEN")
 
 if not TOKEN:
     raise RuntimeError("BOT_TOKEN is not set")
 
+# Пока здесь оставляем текущее голосовое.
+# Когда получим новый VOICE FILE ID, заменим только эту строку.
 VOICE_FILE_ID = "AwACAgIAAxkBAAMDan4PpwOhtrDyCSJSA7b2mamFrm4AAkqkAAJ1BvFL12r5ZScIDpQ9BA"
 
 dp = Dispatcher()
 
+# Сохраняем заявки, которые ещё не были одобрены.
 pending_requests = set()
 
+
+# --------------------------------------------------
+# ПОЛУЧЕНИЕ НОВОГО ГОЛОСОВОГО
+# --------------------------------------------------
+
+@dp.message(F.voice)
+async def voice_handler(message: Message):
+    file_id = message.voice.file_id
+
+    print(f"VOICE FILE ID: {file_id}")
+
+    await message.answer("Голосовое получено!")
+
+
+# --------------------------------------------------
+# НОВАЯ ЗАЯВКА НА ВСТУПЛЕНИЕ
+# --------------------------------------------------
 
 @dp.chat_join_request()
 async def join_request_handler(request: ChatJoinRequest):
@@ -25,9 +45,15 @@ async def join_request_handler(request: ChatJoinRequest):
     pending_requests.add((chat_id, user_id))
 
     print(
-        f"Новая заявка: user_id={user_id}, chat_id={chat_id}"
+        f"Новая заявка: "
+        f"user_id={user_id}, "
+        f"chat_id={chat_id}"
     )
 
+
+# --------------------------------------------------
+# ПОЛЬЗОВАТЕЛЬ СТАЛ УЧАСТНИКОМ
+# --------------------------------------------------
 
 @dp.chat_member()
 async def member_update_handler(
@@ -37,6 +63,8 @@ async def member_update_handler(
     old_status = update.old_chat_member.status
     new_status = update.new_chat_member.status
 
+    # Пользователь был не участником,
+    # а теперь стал участником.
     if new_status in ("member", "restricted") and old_status in (
         "left",
         "kicked",
@@ -50,24 +78,32 @@ async def member_update_handler(
             pending_requests.discard(key)
 
             print(
-                f"Заявка принята вручную: user_id={user_id}"
+                f"Заявка принята вручную: "
+                f"user_id={user_id}"
             )
 
             try:
+                # Отправляем голосовое именно В ГРУППУ.
                 await bot.send_voice(
                     chat_id=chat_id,
                     voice=VOICE_FILE_ID,
                 )
 
                 print(
-                    f"Голосовое отправлено в группу chat_id={chat_id}"
+                    f"Голосовое отправлено в группу "
+                    f"chat_id={chat_id}"
                 )
 
             except Exception as e:
                 print(
-                    f"Не удалось отправить голосовое в группу: {e}"
+                    f"Не удалось отправить голосовое "
+                    f"в группу: {e}"
                 )
 
+
+# --------------------------------------------------
+# ЗАПУСК БОТА
+# --------------------------------------------------
 
 async def main():
     logging.basicConfig(level=logging.INFO)
