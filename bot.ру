@@ -10,19 +10,18 @@ TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
     raise RuntimeError("BOT_TOKEN is not set")
 
-# Пока здесь оставляем текущее голосовое.
-# Когда получим новый VOICE FILE ID, заменим только эту строку.
-VOICE_FILE_ID = "AwACAgIAAxkBAAMDan4PpwOhtrDyCSJSA7b2mamFrm4AAkqkAAJ1BvFL12r5ZScIDpQ9BA"
+# Новое голосовое
+VOICE_FILE_ID = "AwACAgIAAxkBAAMFan4XjF37hCYdq_1ZWjWciV6GCfoAAk-qAALgtvFL4vVoVFGSrdg9BA"
 
 dp = Dispatcher()
 
-# Сохраняем заявки, которые ещё не были одобрены.
+# Заявки, которые ожидают принятия
 pending_requests = set()
 
 
-# --------------------------------------------------
-# ПОЛУЧЕНИЕ НОВОГО ГОЛОСОВОГО
-# --------------------------------------------------
+# ==========================================
+# ПОЛУЧЕНИЕ ГОЛОСОВОГО ОТ ТЕБЯ
+# ==========================================
 
 @dp.message(F.voice)
 async def voice_handler(message: Message):
@@ -33,9 +32,9 @@ async def voice_handler(message: Message):
     await message.answer("Голосовое получено!")
 
 
-# --------------------------------------------------
+# ==========================================
 # НОВАЯ ЗАЯВКА НА ВСТУПЛЕНИЕ
-# --------------------------------------------------
+# ==========================================
 
 @dp.chat_join_request()
 async def join_request_handler(request: ChatJoinRequest):
@@ -51,9 +50,9 @@ async def join_request_handler(request: ChatJoinRequest):
     )
 
 
-# --------------------------------------------------
-# ПОЛЬЗОВАТЕЛЬ СТАЛ УЧАСТНИКОМ
-# --------------------------------------------------
+# ==========================================
+# ПОЛЬЗОВАТЕЛЬ ВСТУПИЛ В ГРУППУ
+# ==========================================
 
 @dp.chat_member()
 async def member_update_handler(
@@ -63,8 +62,8 @@ async def member_update_handler(
     old_status = update.old_chat_member.status
     new_status = update.new_chat_member.status
 
-    # Пользователь был не участником,
-    # а теперь стал участником.
+    # Пользователь был вне группы
+    # и теперь стал участником
     if new_status in ("member", "restricted") and old_status in (
         "left",
         "kicked",
@@ -83,7 +82,7 @@ async def member_update_handler(
             )
 
             try:
-                # Отправляем голосовое именно В ГРУППУ.
+                # Отправляем голосовое В ГРУППУ
                 await bot.send_voice(
                     chat_id=chat_id,
                     voice=VOICE_FILE_ID,
@@ -101,9 +100,9 @@ async def member_update_handler(
                 )
 
 
-# --------------------------------------------------
+# ==========================================
 # ЗАПУСК БОТА
-# --------------------------------------------------
+# ==========================================
 
 async def main():
     logging.basicConfig(level=logging.INFO)
