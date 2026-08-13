@@ -22,12 +22,12 @@ VOICE_FILE_ID = (
 
 dp = Dispatcher()
 
-# Здесь храним заявки до момента фактического вступления
+# Заявки, которые ожидают принятия
 pending_requests = set()
 
 
 # ==========================================
-# ПОЛУЧЕНИЕ ГОЛОСОВОГО
+# ПОЛУЧЕНИЕ НОВОГО ГОЛОСОВОГО
 # ==========================================
 
 @dp.message(F.voice)
@@ -81,7 +81,7 @@ async def member_update_handler(
     print(f"new status: {new_status}")
     print("================================")
 
-    # Пользователь вошёл в группу
+    # Пользователь вошёл в группу после одобрения заявки
     if new_status in ("member", "restricted") and old_status in (
         "left",
         "kicked",
@@ -94,10 +94,15 @@ async def member_update_handler(
             print("================================")
             print("ЗАЯВКА ПРИНЯТА ВРУЧНУЮ")
             print(f"user_id: {user_id}")
-            print("Отправляю голосовое в группу...")
+            print("Жду 2 секунды перед отправкой голосового...")
             print("================================")
 
             try:
+                # Небольшая задержка, чтобы Telegram
+                # успел показать системное сообщение
+                # о принятии пользователя в группу.
+                await asyncio.sleep(2)
+
                 await bot.send_voice(
                     chat_id=chat_id,
                     voice=VOICE_FILE_ID,
